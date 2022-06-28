@@ -1,0 +1,311 @@
+{% load static %} 
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title> Stock Information</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+        <script src="https://code.highcharts.com/stock/highstock.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/data.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/drag-panes.js"></script>
+        <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+    </head>
+
+    <body>
+
+        <div class = "SAheader">
+            <p>Sentiment Analysis </p>
+        </div>
+        <div class = "SATwitterBox" id = "twitter" >
+            <div class = "pieChart">
+                <canvas id="myChart" style="width:50%;"></canvas>                
+            </div>
+            <div class="iconBox" >
+                <img src="https://www.freepnglogos.com/uploads/twitter-logo-png/twitter-company-png-logo-5.png" style="width: 200px; height: 150px;">
+            </div>
+
+        </div>
+        <div class = "top_search_box">
+            <table id = "top_table" style="margin-left: 50px;">
+                <tr>
+                    <th style="font-size: 25px; font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; color: gray;">Keyword Top Search </th>
+                </tr>
+            </table>
+            <img src="{% static 'top_search.png' %}" width="400px" height="400px">   
+        </div>
+        <div class = "rising_search_box">
+            <table id = "rising_table" style="margin-left: 50px;">
+                <tr>
+                    <th style="font-size: 25px; font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; color: gray;">Keyword Rising Search </th>
+                </tr>   
+            </table>
+            <img src="{% static 'rising_search.png' %}" width="400px" height="400px">   
+        </div>
+        <div class = "related_topic_box">
+            <table id = "related_topic_table" style="margin-left: 50px;">
+                <tr>
+                    <th style="font-size: 25px; font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; color: gray;">Related Topic Search </th>
+                </tr>   
+            </table>
+            <img src="{% static 'related_topic_search.png' %}" width="400px" height="400px">   
+        </div>
+        <div class = "twitter_Box">
+            <table id = "twitter_table">
+                <tr>
+                    <th>Sentiment_Analysis_Score</th>
+                    <th>Text</th>
+                </tr>
+            </table>
+        </div>
+
+    </body> 
+</html>
+
+<script>
+
+    //draw pie chart
+    drawTwitter()
+    top_search()
+    rising_search()
+    related_topic_search()
+
+    function drawTwitter(){
+        var twitter_json = JSON.parse('{{ Result.0 | escapejs }}');
+        twitter_json = JSON.parse(twitter_json)
+        var data_size =  twitter_json.length
+        var i = 0;
+        var strong_pos_num = 0;
+        var pos_num = 0;
+        var weak_pos_num = 0;
+        var strong_neg_num = 0;
+        var neg_num = 0;
+        var weak_neg_num = 0;
+        var neu_num= 0;
+        let result_table = document.getElementById("twitter_table");
+        while(i < data_size - 1){
+            if(twitter_json[i]["text"].substring(0,15) == twitter_json[i+1]["text"].substring(0,15)){
+                i++;
+                continue;
+            }
+
+            result_table.innerHTML += '<tr><th>' + twitter_json[i]["compound"] + '</th><th>'  +twitter_json[i]["text"]+'</th><tr>';
+            let val = twitter_json[i]["compound"]
+            if (val >-0.33 && val < 0){
+                weak_neg_num++;
+            }
+            else if (val > - 0.7 && val <= - 0.33){
+                neg_num++;
+            }
+            else if (val <= - 7){
+                strong_neg_num++;
+            }
+            else if(val > 0 & val < 0.33){
+                weak_pos_num++;
+            }
+            else if(val >= 0.33 & val < 0.7){
+                pos_num++;
+            }
+            else if(val >= 0.7){
+                strong_pos_num++;
+            }
+            else{
+                neu_num++;
+            }
+            i++;
+        }
+        //chart
+        var xValues = ["Strongly Positive","Postive","Weakly Positive", "Neutral", "Weakly Negative", "Negative","Strongly Negative"];
+        var yValues = [strong_pos_num,pos_num,weak_pos_num,neu_num,weak_neg_num,neg_num,strong_neg_num];
+        var barColors = [
+        "#228B22",
+        "#7CFC00",
+        "#AFE1AF",
+        "#DFFF00",
+        "#F88379",
+        "#D2042D",
+        "#880808"
+        ];
+        console.log(yValues)
+        new Chart("myChart", {
+        type: "pie",
+        data: {
+            labels: xValues,
+            datasets: [{
+            backgroundColor: barColors,
+            data: yValues
+            }]
+        },
+        options: {
+            title: {
+            display: true,
+            text: "Twitter Sentimental Analysis Result Chart " + twitter_json[0]["ticker"]
+            },
+            legend: {
+                display: true,
+                position: 'right',
+            }    
+        }
+        });
+    }
+
+    function top_search(){
+        var top_list = ('{{ Result.1 | escapejs }}').split("', '");
+        let data_length = top_list.length
+        top_list[0] = top_list[0].slice(2)
+        console.log(top_list)
+        let result_table = document.getElementById("top_table");
+        if(data_length > 10){
+            data_length = 10
+        }else{
+            data_length = data_length -1
+        }
+        let a = 0;
+        while(a<data_length){
+            result_table.innerHTML += '<tr><th>'  +top_list[a]+'</th><tr>';
+            a++;
+        }
+    }
+
+    function rising_search(){
+        var rising_list = ('{{ Result.2 | escapejs }}').split("', '");
+        let data_length = rising_list.length
+        rising_list[0] = rising_list[0].slice(2)
+        console.log(rising_list)
+        let result_table = document.getElementById("rising_table");
+        if(data_length > 10){
+            data_length = 10
+        }else{
+            data_length = data_length -1
+        }
+        let a = 0;
+        while(a<data_length){
+            result_table.innerHTML += '<tr><th>'  +rising_list[a]+'</th><tr>';
+            a++;
+        }
+    }
+
+    function related_topic_search(){
+        var rising_list = ('{{ Result.3 | escapejs }}').split("', '");
+        let data_length = rising_list.length
+        rising_list[0] = rising_list[0].slice(2)
+        console.log(rising_list)
+        let result_table = document.getElementById("related_topic_table");
+        if(data_length > 10){
+            data_length = 10
+        }else{
+            data_length = data_length -1
+        }
+        let a = 0;
+        while(a<data_length){
+            result_table.innerHTML += '<tr><th>'  +rising_list[a]+'</th><tr>';
+            a++;
+        }
+    }
+
+
+
+</script>
+
+<style>
+    a:hover {
+      background-color: green;
+    }
+    .header{
+        font-size: 25px;
+        border: 1px transparent ;
+        border-radius: 4px; 
+        margin-left:20%; 
+        margin-right: 20%;
+        font-family:Verdana, Geneva, Tahoma, sans-serif;
+    }
+
+    .img_style{
+        margin-left: 35%;
+        width: 100px;
+        height: 100px;
+        margin-top: 20px;
+    }
+
+    table, th, td {
+        border: 1px solid grey;
+        border-left: none;
+        border-right:none;
+        border-collapse: collapse;
+        font-family:Verdana, Geneva, Tahoma, sans-serif;
+        font-size: 14px;
+        height: 30px;
+    }
+    .top_search_box{
+        position: absolute;
+        margin-left: 200px ;
+        margin-top:0px;
+        width:650px;
+        height: 600px;
+    }
+    .rising_search_box{
+        position: absolute;
+        margin-left: 700px ;
+        margin-top:0px;
+        width:650px;
+        height: 600px;
+    }
+    .related_topic_box{
+        position: absolute;
+        margin-left: 1200px ;
+        margin-top:0px;
+        width:650px;
+        height: 600px;
+    }
+    .SAheader{
+        position: absolute;
+        width:1400px;
+        height:50px;
+        margin-top: 800px;
+        margin-left: 200px;
+        text-align: center;
+        font-family:Verdana, Geneva, Tahoma, sans-serif;
+        font-size: 20px;
+        font-weight: bolder;
+    }
+
+    .SATwitterBox{
+        position: absolute;
+        margin-top: 850px;
+        margin-left: 200px;
+        width:700px;
+        height:350px;
+    }
+
+    .SAFBox{
+        position: absolute;
+        margin-top: 850px;
+        margin-left: 900px;
+        width:700px;
+        height:350px;
+    }
+
+    .pieChart{
+        position: absolute;
+        margin-left: 200px ;
+        margin-top:100px;
+        width: 50%;
+    }
+
+    .iconBox{
+        position: absolute;
+        margin-left: 900px ;
+        margin-top:100px;
+        width:250px;
+        height:250px;
+    }
+    
+    .twitter_Box{
+        position: absolute;
+        margin-left: 200px ;
+        margin-top:1200px;
+        width:1300px;
+
+    }
+
+
+</style>
